@@ -1,0 +1,17 @@
+services:
+ gitlab:
+   image: "gitlab/gitlab-ce:18.5.5-ce.0"
+   container_name: gitlab
+   restart: always
+   hostname: "testgitlab.com.tw"
+   shm_size: '2gb' # 重要，docker部署容易導致監控數據寫到爆滿
+   environment:
+     TZ: "Asia/Taipei"
+   ports:
+     - "80:80" # http://localhost/users/sign_in
+     - "443:443"
+     - "22:22"
+   volumes:
+     - '~/volumes/gitlab/config:/etc/gitlab'
+     - '~/volumes/gitlab/logs:/var/log/gitlab'
+     - '~/volumes/gitlab/data:/var/opt/gitlab'
