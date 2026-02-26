@@ -19,6 +19,7 @@ sudo -u gitlab-psql /opt/gitlab/embedded/bin/psql -h "/var/opt/gitlab/postgresql
 # GITLAB預設帳密
 帳號：root
 密碼：container內的 /etc/gitlab/initial_root_password
+sudo cat ~/volumes/gitlab/config/initial_root_password
 
 # 修改 /etc/gitlab/gitlab.rb(目前這種做法沒有成功過)
 vi /etc/gitlab/gitlab.rb
@@ -53,6 +54,23 @@ COPY projects
 TO '/tmp/projects.csv'
 WITH (FORMAT CSV, HEADER, DELIMITER ',');
 
-目前解法將table匯出並複製到外面：
-docker exec -it gitlab bash -c "gitlab-psql -c \"COPY projects TO '/tmp/projects.csv' WITH (FORMAT CSV, HEADER, DELIMITER ',');\""
+!! 目前解法將table匯出並複製到外面：
+docker exec -it gitlab bash -c "gitlab-psql -c \"COPY (select * from projects) TO '/tmp/projects.csv' WITH (FORMAT CSV, HEADER, DELIMITER ',');\""
 docker cp gitlab:/tmp/projects.csv ~/
+
+查預設密碼
+sudo cat ~/volumes/gitlab/config/initial_root_password
+
+重設密碼
+docker exec -it gitlab bash -c "gitlab-rake \"gitlab:password:reset\""
+
+SELECT * FROM public.projects p 
+
+SELECT * FROM public.namespaces n 
+
+SELECT 
+p.id AS project_id,
+*
+FROM public.projects p 
+LEFT JOIN public.namespaces n 
+ON p.namespace_id  = n.id 

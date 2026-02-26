@@ -1,0 +1,49 @@
+services:
+  gitlab:
+    image: "gitlab/gitlab-ce:18.5.5-ce.0"
+    container_name: gitlab
+    restart: always
+    hostname: "testgitlab.com.tw"
+    shm_size: '2gb'
+    environment:
+      TZ: "Asia/Taipei"
+      GITLAB_OMNIBUS_CONFIG: |
+        # 停用內建的 Postgres，改用外部 Postgres
+        postgresql['enable'] = false
+        # 指向下方 postgres 服務（container 內同網段可用服務名做 host）
+        gitlab_rails['db_adapter']  = 'postgresql'
+        gitlab_rails['db_encoding'] = 'unicode'
+        gitlab_rails['db_host']     = 'postgres'     # 對應下面 postgres 服務名
+        gitlab_rails['db_port']     = 5432
+        gitlab_rails['db_database'] = 'gitlabhq_production'
+        gitlab_rails['db_username'] = 'gitlab'
+        gitlab_rails['db_password'] = 'StrongPassword!ChangeMe'
+
+        # 建議：強制以加密連線（若你在 Postgres 端啟用 SSL 可打開）
+        # gitlab_rails['db_sslmode'] = 'require'
+    ports:
+      - "80:80"     # Web
+      - "443:443"   # HTTPS
+      - "22:22"     # SSH
+    volumes:
+      - '~/volumes/gitlab/config:/etc/gitlab'
+      - '~/volumes/gitlab/logs:/var/log/gitlab'
+      - '~/volumes/gitlab/data:/var/opt/gitlab'
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16
+    container_name: gitlab-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: gitlabhq_production
+      POSTGRES_USER: gitlab
+      POSTGRES_PASSWORD: StrongPassword!ChangeMe
+      TZ: "Asia/Taipei"
+    # 建議固定時區與編碼，GitLab 需求為 UTF8
+    command: ["postgres", "-c", "shared_buffers=512MB", "-c", "max_connections=400"]
+    volumes:
+      - '~/volumes/postgres/data:/var/lib/postgresql/data'
+    ports:
+      - "5432:5432"   # 若只給 GitLab 用，可省略對外映射（僅容器間通訊）
