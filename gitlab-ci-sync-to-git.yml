@@ -1,0 +1,36 @@
+stages:
+  - sync-metadata-to-git
+
+deploy:
+  image: $DEPLOY_IMAGE
+  stage: sync-metadata-to-git
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+    - when: never
+  script:
+    - echo "設定git..."
+    - git config --global http.sslVerify false
+    - git config --global user.email "$GIT_USER_EMAIL"
+    - git config --global user.name "$GIT_USER_NAME"
+
+    - echo "clone設定檔專案..."
+    - rm -rf /tmp/$DEST_REPO_FULL_PATH
+    - git clone https://${GITLAB_CI_NAME}:${GITLAB_CI_TOKEN}@${GIT_HOST}/$DEST_REPO_FULL_PATH.git /tmp/$DEST_REPO_FULL_PATH
+  
+    - echo "取得gitlab metadata..."
+    - docker exec -t gitlab bash -c "gitlab-psql -c \"COPY (select * from projects) TO '/tmp/projects.csv' WITH (FORMAT CSV, HEADER, DELIMITER ',');\""
+    - docker exec -t gitlab bash -c "gitlab-psql -c \"COPY (select * from routes) TO '/tmp/routes.csv' WITH (FORMAT CSV, HEADER, DELIMITER ',');\""
+    - docker cp gitlab:/tmp/projects.csv /tmp/$DEST_REPO_FULL_PATH
+    - docker cp gitlab:/tmp/routes.csv /tmp/$DEST_REPO_FULL_PATH
+
+    - echo "commit & push"
+    - cd /tmp/$DEST_REPO_FULL_PATH
+    - if [[ -n "$(git status --porcelain)" ]]; then
+    -   echo "有新專案...開始commit"
+    -   git add .
+    -   git commit -m "update-metadata"
+    -   git push 
+    - else 
+    -   echo "無新專案.."
+    - fi

@@ -93,8 +93,8 @@ ON r.source_type='Project' AND p.id  = r.source_id
 # 預定計畫
 ## planA: Loop Gitlab 專案 API + Loop search API
 ## planB: Copy projects,routes table csv + Loop search API
-
-
+1. 使用gitlab的 scheduled pipeline定時啟動腳本
+2. TODO要有一個任務去取更新後的檔案
 ## planC: Repository Mirroring to gitea (setting)
 1. 修改gitea app.ini(volumes/gitea/gitea/conf/app.ini)
   ```ini
