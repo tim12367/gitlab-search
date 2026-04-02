@@ -106,3 +106,36 @@ ON r.source_type='Project' AND p.id  = r.source_id
   ```
 2. TODO 切分另一區塊做攤平分支
   改用elastic search索引
+
+# gitlab-search-be
+
+## Getting started
+
+### install
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+
+### export requirements
+pip freeze > requirements.txt
+
+### package base image
+docker build -f ./package-git-Dockerfile -t treg.cathay-ins.com.tw/runner-image/python-git:3.12.13-slim .
+
+### run docker container
+docker rm -f gitlab-search
+docker build -f ./Containerfile -t gitlab-search .
+docker run --name gitlab-search -p 8080:8080 gitlab-search
+
+### docker 除錯
+docker exec -it -u 0 gitlab-search bash
+
+### run in dev
+. .venv/bin/activate
+flask --app app run --debug
+
+### swagger
+http://127.0.0.1:5000/apidocs/
+
+### unit test
+python -m test.git_service_test

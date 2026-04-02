@@ -1,11 +1,11 @@
 stages:
   - sync-metadata-to-git
-
-deploy:
+  - sync-branches-to-table
+sync-projects:
   image: $DEPLOY_IMAGE
   stage: sync-metadata-to-git
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $SYNC_PROJECTS == "true"'
       when: always
     - when: never
   script:
@@ -21,8 +21,13 @@ deploy:
     - echo "取得gitlab metadata..."
     - docker exec -t gitlab bash -c "gitlab-psql -c \"COPY (select * from projects) TO '/tmp/projects.csv' WITH (FORMAT CSV, HEADER, DELIMITER ',');\""
     - docker exec -t gitlab bash -c "gitlab-psql -c \"COPY (select * from routes) TO '/tmp/routes.csv' WITH (FORMAT CSV, HEADER, DELIMITER ',');\""
+    - docker exec -t gitlab bash -c "gitlab-psql -c \"COPY (select * from users) TO '/tmp/users.csv' WITH (FORMAT CSV, HEADER, DELIMITER ',');\""
+    - docker exec -t gitlab bash -c "gitlab-psql -c \"COPY (select * from project_authorizations) TO '/tmp/project_authorizations.csv' WITH (FORMAT CSV, HEADER, DELIMITER ',');\""
+
     - docker cp gitlab:/tmp/projects.csv /tmp/$DEST_REPO_FULL_PATH
     - docker cp gitlab:/tmp/routes.csv /tmp/$DEST_REPO_FULL_PATH
+    - docker cp gitlab:/tmp/users.csv /tmp/$DEST_REPO_FULL_PATH
+    - docker cp gitlab:/tmp/project_authorizations.csv /tmp/$DEST_REPO_FULL_PATH
 
     - echo "commit & push"
     - cd /tmp/$DEST_REPO_FULL_PATH
@@ -31,6 +36,19 @@ deploy:
     -   git add .
     -   git commit -m "update-metadata"
     -   git push 
+    -   echo "有新專案...commit成功~~"
+    -   echo "有新專案...呼叫同步任務..."
+    -   "wget --post-data=\"\" --header=\"accept: application/json\" \"http://gitlab-search-be.gitlab-search.apps.ocpsit.intranet.tw/sync-csv\" -O -"
+    -   echo "有新專案...同步任務成功~~"
     - else 
     -   echo "無新專案.."
     - fi
+sync-branches:
+  image: $DEPLOY_IMAGE
+  stage: sync-branches-to-table
+  rules:
+  - if: '$CI_PIPELINE_SOURCE == "schedule" && $SYNC_BRANCHES == "true"' 
+    when: always
+  - when: never
+  script:
+  - "wget --post-data=\"\" --header=\"accept: application/json\" \"http://gitlab-search-be.gitlab-search.apps.ocpsit.intranet.tw/sync-branch\" -O -"
